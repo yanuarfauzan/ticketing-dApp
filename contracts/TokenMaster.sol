@@ -41,6 +41,31 @@ contract TokenMaster is ERC721 {
         _;
     }
 
+    modifier idMustNotZero(uint256 _id) {
+        require(_id != 0, "Id cannot be zero");
+        _;
+    }
+
+    modifier idMustUnderTotalEvents(uint256 _id){
+        require(_id <= totalEvents, "Id must under total events");
+        _;
+    }
+
+    modifier valueMustGreaterThanCost(uint256 _id) {
+        require(msg.value >= events[_id].cost, "Value must greater than cost");
+        _;
+    }
+
+    modifier seatMustNotTaken(uint256 _id, uint256 _seat) {
+        require(seatTaken[_id][_seat] == address(0), "Seat must not taken");
+        require(_seat <= events[_id].maxTickets, "Seat must under max tickets");
+        _;
+    }
+
+    modifier onlyOwner() {
+        require(msg.sender == owner);
+        _;
+    }
 
     function createEvent(string memory _name, uint256 _cost, uint256 _tickets, uint256 _maxTickets, string memory _date, string memory _time, string memory _location) public onlyEo {
         totalEvents++;
@@ -68,13 +93,22 @@ contract TokenMaster is ERC721 {
         return events[_id];
     }
 
-    function mint(uint256 _id, uint256 _seat) public payable {
+    function mint(uint256 _id, uint256 _seat) public payable 
+    idMustNotZero(_id) 
+    idMustUnderTotalEvents(_id) 
+    valueMustGreaterThanCost(_id)
+    seatMustNotTaken(_id, _seat) {
         events[_id].tickets -= 1;
         hasBought[_id][msg.sender] = true;
         seatTaken[_id][_seat] = msg.sender;
         seatsTaken[_id].push(_seat);
         totalSupply++;
         _safeMint(msg.sender, totalSupply);
+    }
+
+    function withdraw() public onlyEo {
+        (bool success, ) = eventOrganizer.call{value: address(this).balance}("");
+        require(success);
     }
 
 

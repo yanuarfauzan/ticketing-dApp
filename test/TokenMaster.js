@@ -115,7 +115,41 @@ describe("TokenMaster", () => {
             expect(balance).to.be.equal(AMOUNT);
         })
 
+    })
+    describe('Withdrawing', async () => {
+        const ID = 1;
+        const SEAT = 50;
+        const AMOUNT = tokens(1);
+
+        let balanceBefore;
+
+        beforeEach(async () => {
+            balanceBefore = await ethers.provider.getBalance(eventOrganizer.address);
+            [deployer, eventOrganizer, user] = await ethers.getSigners();
+            const TokenMaster = await ethers.getContractFactory("TokenMaster");
+            tokenMaster = await TokenMaster.connect(deployer).deploy(NAME, SYMBOL, eventOrganizer.address);
+        
+            transaction = await tokenMaster.connect(eventOrganizer).createEvent(EVENT, COST, TICKETS, MAX_TICKETS, DATE, TIME, LOCATION
+            )
+            await transaction.wait();
+
+            transaction = await tokenMaster.connect(user).mint(ID, SEAT, {value: AMOUNT});
+            await transaction.wait();
+
+            transaction = await tokenMaster.connect(eventOrganizer).withdraw();
+            await transaction.wait();
+        })
+
+        it('Updates eventOrganizer balance', async () => {
+            const balanceAfter = await ethers.provider.getBalance(eventOrganizer.address);
+            expect(balanceAfter).to.be.greaterThan(balanceBefore);
+        })
+        it('Updates contract balance', async () => {
+            const balanceAfter = await ethers.provider.getBalance(tokenMaster.address);
+            expect(balanceAfter).to.be.equal(0);
+        })
 
 
     })
+
 })
